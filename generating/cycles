@@ -1,0 +1,98 @@
+# the output of this script has duplicates, and is unordered. it is meant to be
+# piped to `sort -u`
+
+# 00 01 02
+# 03 04 05
+# 06 07 08
+
+my @n =
+    [0, 3, 12, 13],
+    [1, 4, 13, 14],
+    [2, 5, 14, 15],
+    [3, 6, 16, 17],
+    [4, 7, 17, 18],
+    [5, 8, 18, 19],
+    [6, 9, 20, 21],
+    [7, 10, 21, 22],
+    [8, 11, 22, 23],
+    [0, 1, 2, 9, 10, 11, 12, 15, 16, 19, 20, 23],
+;
+
+#   00  01  02
+# 12  13  14  15
+#   03  04  05
+# 16  17  18  19
+#   06  07  08
+# 20  21  22  23
+#   09  10  11
+
+my @w =
+    # vertical walls 4x3
+    [0, 9], [1, 9], [2, 9],
+    [0, 3], [1, 4], [2, 5],
+    [3, 6], [4, 7], [5, 8],
+    [6, 9], [7, 9], [8, 9],
+    # horizontal walls 3x4
+    [0, 9], [0, 1], [1, 2], [2, 9],
+    [3, 9], [3, 4], [4, 5], [5, 9],
+    [6, 9], [6, 7], [7, 8], [8, 9],
+;
+
+# 00 01 02 03
+# 04 05 06 07
+# 08 09 10 11
+# 12 13 14 15
+
+my @c =
+    { 0 => 1, 12 => 4 }, { 0 => 0, 1 => 2, 13 => 5 }, { 1 => 1, 2 => 3, 14 => 6 }, { 2 => 2, 15 => 7 },
+    { 3 => 5, 12 => 0, 16 => 8 }, { 3 => 4, 4 => 6, 13 => 1, 17 => 9 }, { 4 => 5, 5 => 7, 14 => 2, 18 => 10 }, { 5 => 6, 15 => 3, 19 => 11 },
+    { 6 => 9, 16 => 4, 20 => 12 }, { 6 => 8, 7 => 10, 17 => 5, 21 => 13 }, { 7 => 9, 8 => 11, 18 => 6, 22 => 14 }, { 8 => 10, 19 => 7, 23 => 15 },
+    { 9 => 13, 20 => 8 }, { 9 => 12, 10 => 14, 21 => 9 }, { 10 => 13, 11 => 15, 22 => 10 }, { 11 => 14, 23 => 11 },
+;
+
+sub area($s) {
+    my $area = 0;
+    my @queue = 0;
+    my %visited;
+    while @queue {
+        my $c = @queue.shift;
+        next if %visited{$c}++;
+        for @c[$c].kv -> $wall, $neighbor {
+            if $s.substr($wall, 1) eq "0" {
+                @queue.push($neighbor);
+            }
+        }
+        $area++;
+    }
+    # the grid gets split into two. we always return the smaller area.
+    return $area > 8 ?? 16 - $area !! $area;
+}
+
+sub find-cycles(@points, @walls) {
+    my $p1 = @points[*-1];
+    for @n[$p1].list -> $w {
+        next if $w ∈ @walls;
+        my @ww = @w[$w].list;
+        my $p2 = @ww[0] == $p1 ?? @ww[1] !! @ww[0];
+        if $p2 == @points[0] {
+            my $s = "000000000000000000000000";
+            my @cycle = @walls, $w;
+            for @cycle -> $i {
+                $s = $s.substr(0, $i) ~ "1" ~ $s.substr($i + 1);
+            }
+            my $vertical = @cycle ∩ (0, 1, 2, 9, 10, 11);
+            my $horizontal = @cycle ∩ (12, 15, 16, 19, 20, 23);
+            my $category =
+                ($vertical && $horizontal) ?? "adjacent" !!
+                ($vertical || $horizontal) ?? "opposite" !! "internal";
+            my $area = area($s);
+            say "$s\t$category/{(+@cycle).fmt("%02d")}/$area";
+        }
+        next if $p2 ∈ @points;
+        find-cycles([@points, $p2], [@walls, $w]);
+    }
+}
+
+for 0..9 -> $p {
+    find-cycles([$p], []);
+}

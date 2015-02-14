@@ -1,0 +1,40 @@
+constant COLUMNS = 5;
+
+my @mazes;
+sub print_mazes {
+    return unless @mazes;
+
+    for ^9 -> $n {
+        sub line($maze) { $maze.lines[$n] }
+        say (line($_) for @mazes).join("  ");
+    }
+    say "";
+    @mazes = ();
+}
+
+for lines() -> $line {
+    my $maze = q:to/EOF/;
+        +--+--+--+--+
+        |  :  :  :  |
+        +..+..+..+..+
+        |  :  :  :  |
+        +..+..+..+..+
+        |  :  :  :  |
+        +..+..+..+..+
+        |  :  :  :  |
+        +--+--+--+--+
+        EOF
+
+    my $pos = 0;
+    $maze .= subst(':', { $line.substr($pos++, 1) ?? '|' !! ' ' }, :g);
+    $maze .= subst('..', { $line.substr($pos++, 1) ?? '--' !! '  ' }, :g);
+
+    @mazes.push: $maze;
+    if @mazes >= COLUMNS {
+        print_mazes;
+    }
+}
+
+if @mazes {
+    print_mazes;
+}

@@ -1,0 +1,70 @@
+my $line1 = get;
+my $N = +$line1.comb(/\H+/);
+
+MAZEROW:
+for 0..* -> $h {
+    for ^$N -> $i {
+        my $x1 = 6 * $i;
+        my $y1 = 6 * $h;
+        my $x2 = 6 * $i + 4;
+        my $y2 = 6 * $h + 4;
+        say "rect {$x1+1/4} {$y1+1/4} {$x2+1/4} {$y2+1/4} :shadow";
+        say "rect $x1 $y1 $x2 $y2 :labyrinth";
+        for 1..3 -> $j {
+            say "line {$x1+$j} {$y1+0.05} {$x1+$j} {$y2-0.05} :gridline";
+        }
+        for 1..3 -> $j {
+            say "line {$x1+0.05} {$y1+$j} {$x2-0.05} {$y1+$j} :gridline";
+        }
+    }
+
+    for ^4 -> $i {
+        my $y1 = 6 * $h + $i;
+        if $i > 0 {
+            between-row($y1);
+        }
+        row($y1);
+    }
+
+    get;
+    repeat while $line1 ~~ /^ \s* $/ {
+        $line1 = get() // last MAZEROW;
+    }
+}
+
+sub row($y1) {
+    my $line = get;
+    my @walls = $line.comb.grep({ state $i = 0; $i++ %% 3 });
+    for ^$N -> $i {
+        for 1..3 -> $j {
+            if @walls[5 * $i + $j] eq "|" {
+                my $x1 = 6 * $i + $j;
+                my ($x2, $y2) = $x1, $y1 + 1;
+                say "line $x1 $y1 $x2 $y2 :wall";
+            }
+            else {
+                my $x1 = 6 * $i + $j - 1/2;
+                my $x2 = 6 * $i + $j + 1/2;
+                say "line $x1 {$y1+1/2} $x2 {$y1+1/2} :spanning";
+            }
+        }
+    }
+}
+
+sub between-row($y1) {
+    my $line = get;
+    my @walls = $line.comb.grep({ state $i = 0; $i++ % 3 == 1 });
+    for ^$N -> $i {
+        for ^4 -> $j {
+            if @walls[5 * $i + $j] eq "-" {
+                my $x1 = 6 * $i + $j;
+                my ($x2, $y2) = $x1 + 1, $y1;
+                say "line $x1 $y1 $x2 $y2 :wall";
+            }
+            else {
+                my $x1 = 6 * $i + $j;
+                say "line {$x1+1/2} {$y1-1/2} {$x1+1/2} {$y1+1/2} :spanning";
+            }
+        }
+    }
+}

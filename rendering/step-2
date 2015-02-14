@@ -1,0 +1,85 @@
+my @body;
+
+my ($max_x, $max_y) = 0, 0;
+
+for lines() {
+    when /^ \h* $/ {
+        next;
+    }
+
+    when /^ :s line (\d+ ['.' \d+]?) ** 4 [ ':' (\w+) ]? $ / {
+        my ($x1, $y1, $x2, $y2) = +«@0;
+        my $class = $1 ?? qq[class="$1" ] !! q[];
+        @body.push: qq[<path d="M $x1,$y1 $x2,$y2" $class/>];
+
+        $max_x max= $x1 max $x2;
+        $max_y max= $y1 max $y2;
+    }
+
+    when /^ :s rect (\d+ ['.' \d+]?) ** 4 [ ':' (\w+) ]? $ / {
+        my ($x1, $y1, $x2, $y2) = +«@0;
+        my $width = $x2 - $x1;
+        my $height = $y2 - $y1;
+        my $class = $1 ?? qq[class="$1" ] !! q[];
+        @body.push: qq[<rect x="$x1" y="$y1" width="$width" height="$height" rx="0.1" ry="0.1" $class/>];
+
+        $max_x max= $x1 max $x2;
+        $max_y max= $y1 max $y2;
+    }
+
+    default {
+        note "Unrecognized line '$_'";
+        exit 1;
+    }
+}
+
+my $body = @body.map({ "    $_" }).join("\n");
+my $width = $max_x;
+my $height = $max_y;
+
+say qq:to/EOF/;
+    <svg
+       xmlns:dc="http://purl.org/dc/elements/1.1/"
+       xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+       xmlns:svg="http://www.w3.org/2000/svg"
+       xmlns="http://www.w3.org/2000/svg"
+       version="1.1"
+       width="$width"
+       height="$height"
+       id="svg2">
+        <defs
+           id="defs95">
+          <filter
+             color-interpolation-filters="sRGB"
+             id="filter3862">
+            <feGaussianBlur
+               id="feGaussianBlur3864"
+               stdDeviation="0.08" />
+          </filter>
+        </defs>
+        <style>
+          .shadow \{
+            fill:#666666;
+            filter:url(#filter3862);
+          \}
+
+          .labyrinth \{
+            fill:#cccccc;
+            stroke:#3333bb;
+            stroke-width:0.1;
+          \}
+
+          .gridline \{
+            stroke:#9999ee;
+            stroke-width:0.025;
+          \}
+
+          .wall \{
+            stroke:#3333bb;
+            stroke-width:0.1;
+            stroke-linecap:round;
+          \}
+    </style>
+    $body
+    </svg>
+    EOF
